@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Record System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .view {
+            display: none;
+        }
+        .view.active {
+            display: block;
+        }
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+        }
+        .modal-backdrop.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal {
+            z-index: 50;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-4 md:p-6 lg:p-8 max-w-7xl">
+
+        <!-- Header -->
+        <header class="mb-6 bg-white p-6 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Attendance Tracker</h1>
+                <p class="text-gray-500 mt-1">A real-time attendance management system.</p>
+            </div>
+            <div id="auth-info" class="text-xs text-gray-400 mt-4 md:mt-0">
+                Loading user...
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="bg-white rounded-xl shadow-md p-3 mb-6 flex flex-wrap justify-center gap-2">
+            <button onclick="switchView('dashboard')" class="nav-btn flex-grow md:flex-grow-0 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105"><i class="fas fa-tachometer-alt mr-2"></i>Dashboard</button>
+            <button onclick="switchView('students')" class="nav-btn flex-grow md:flex-grow-0 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-300"><i class="fas fa-users mr-2"></i>Manage Students</button>
+            <button onclick="switchView('attendance')" class="nav-btn flex-grow md:flex-grow-0 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-300"><i class="fas fa-check-circle mr-2"></i>Take Attendance</button>
+            <button onclick="switchView('reports')" class="nav-btn flex-grow md:flex-grow-0 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-300"><i class="fas fa-chart-bar mr-2"></i>View Reports</button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main id="main-content">
+            <!-- Dashboard View -->
+            <div id="dashboard" class="view active">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-md flex items-center">
+                        <i class="fas fa-users text-4xl text-blue-500 mr-4"></i>
+                        <div>
+                            <p class="text-gray-500">Total Students</p>
+                            <p id="total-students-stat" class="text-3xl font-bold">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md flex items-center">
+                        <i class="fas fa-user-check text-4xl text-green-500 mr-4"></i>
+                        <div>
+                            <p class="text-gray-500">Today's Present</p>
+                            <p id="present-stat" class="text-3xl font-bold">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md flex items-center">
+                        <i class="fas fa-user-times text-4xl text-red-500 mr-4"></i>
+                        <div>
+                            <p class="text-gray-500">Today's Absent</p>
+                            <p id="absent-stat" class="text-3xl font-bold">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md mt-6">
+                    <h2 class="text-xl font-bold mb-4">Quick Actions</h2>
+                    <div class="flex flex-wrap gap-4">
+                        <button onclick="switchView('attendance')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-5 rounded-lg transition duration-300">Take Today's Attendance</button>
+                        <button onclick="openAddStudentModal()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-5 rounded-lg transition duration-300">Add New Student</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students View -->
+            <div id="students" class="view">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">Student Roster</h2>
+                        <button onclick="openAddStudentModal()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300"><i class="fas fa-plus mr-2"></i>Add Student</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="py-3 px-4 text-left">Name</th>
+                                    <th class="py-3 px-4 text-left">Roll Number</th>
+                                    <th class="py-3 px-4 text-left">Notes</th>
+                                    <th class="py-3 px-4 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="student-list-table">
+                                <!-- Student rows will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance View -->
+            <div id="attendance" class="view">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-xl font-bold mb-4">Take Attendance</h2>
+                    <div class="mb-4">
+                        <label for="attendance-date-picker" class="block text-sm font-medium text-gray-700">Select Date:</label>
+                        <input type="date" id="attendance-date-picker" class="mt-1 block w-full md:w-1/2 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div id="attendance-sheet" class="overflow-x-auto">
+                        <!-- Attendance sheet will be generated here -->
+                    </div>
+                    <button onclick="saveAttendance()" class="mt-6 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300"><i class="fas fa-save mr-2"></i>Save Attendance</button>
+                </div>
+            </div>
+
+            <!-- Reports View -->
+            <div id="reports" class="view">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-xl font-bold mb-4">Attendance Reports</h2>
+                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label for="report-start-date" class="block text-sm font-medium text-gray-700">Start Date:</label>
+                            <input type="date" id="report-start-date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label for="report-end-date" class="block text-sm font-medium text-gray-700">End Date:</label>
+                            <input type="date" id="report-end-date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label for="report-student-select" class="block text-sm font-medium text-gray-700">Student:</label>
+                            <select id="report-student-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="all">All Students</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="generateReport()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300"><i class="fas fa-cogs mr-2"></i>Generate Report</button>
+                    <div id="report-output" class="mt-6 overflow-x-auto">
+                        <!-- Report table will be shown here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Student Modal -->
+    <div id="student-modal-backdrop" class="modal-backdrop">
+        <div class="modal bg-white rounded-xl shadow-2xl w-11/12 md:w-1/2 lg:w-1/3 p-6">
+            <h3 id="student-modal-title" class="text-2xl font-bold mb-4">Add New Student</h3>
+            <form id="student-form">
+                <input type="hidden" id="student-id">
+                <div class="mb-4">
+                    <label for="student-name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input type="text" id="student-name" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
+                </div>
+                <div class="mb-4">
+                    <label for="student-roll" class="block text-sm font-medium text-gray-700">Roll Number</label>
+                    <input type="text" id="student-roll" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
+                </div>
+                <div class="mb-4">
+                    <label for="student-notes" class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
+                    <textarea id="student-notes" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm"></textarea>
+                </div>
+                <div class="flex justify-end gap-4 mt-6">
+                    <button type="button" onclick="closeStudentModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">Cancel</button>
+                    <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Save Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Message Modal -->
+    <div id="message-modal-backdrop" class="modal-backdrop">
+        <div class="modal bg-white rounded-xl shadow-2xl w-11/12 md:w-1/3 p-6 text-center">
+            <p id="message-text" class="text-lg mb-4"></p>
+            <button onclick="closeMessageModal()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">OK</button>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- GLOBAL STATE & CONFIG ---
+        let db, auth, userId;
+        let students = []; // Local cache of students
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-attendance-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
+
+        // --- INITIALIZATION ---
+        window.onload = async () => {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                await setPersistence(auth, inMemoryPersistence);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('auth-info').textContent = `User ID: ${userId}`;
+                        initializeAppLogic();
+                    }
+                });
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+                showMessage("Error connecting to the application services. Please refresh the page.");
+            }
+        };
+
+        function initializeAppLogic() {
+            setupEventListeners();
+            listenForStudents();
+            updateDashboardStats();
+            // Set date pickers to today by default
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('attendance-date-picker').value = today;
+            document.getElementById('report-start-date').value = today;
+            document.getElementById('report-end-date').value = today;
+            loadAttendanceForDate(today);
+        }
+        
+        // --- EVENT LISTENERS ---
+        function setupEventListeners() {
+            document.getElementById('student-form').addEventListener('submit', handleStudentFormSubmit);
+            document.getElementById('attendance-date-picker').addEventListener('change', (e) => loadAttendanceForDate(e.target.value));
+        }
+
+        // --- VIEW SWITCHING ---
+        window.switchView = (viewId) => {
+            document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-800');
+            });
+            const activeButton = document.querySelector(`.nav-btn[onclick="switchView('${viewId}')"]`);
+            activeButton.classList.add('bg-blue-500', 'text-white');
+            activeButton.classList.remove('bg-gray-200', 'text-gray-800');
+
+            if (viewId === 'dashboard') {
+                updateDashboardStats();
+            }
+        };
+
+        // --- STUDENT MANAGEMENT ---
+        function listenForStudents() {
+            const studentsCollection = collection(db, `artifacts/${appId}/public/data/students`);
+            onSnapshot(studentsCollection, (snapshot) => {
+                students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderStudentList();
+                renderReportStudentSelect();
+                updateDashboardStats();
+                loadAttendanceForDate(document.getElementById('attendance-date-picker').value); // Reload attendance sheet if students change
+            }, (error) => {
+                console.error("Error listening for student updates:", error);
+                showMessage("Could not fetch student data.");
+            });
+        }
+
+        function renderStudentList() {
+            const tableBody = document.getElementById('student-list-table');
+            if (students.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-500">No students found. Add one to get started!</td></tr>`;
+                return;
+            }
+            tableBody.innerHTML = students.map(student => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4">${student.name}</td>
+                    <td class="py-3 px-4">${student.rollNumber}</td>
+                    <td class="py-3 px-4">${student.notes || ''}</td>
+                    <td class="py-3 px-4 text-center">
+                        <button onclick="openEditStudentModal('${student.id}')" class="text-blue-500 hover:text-blue-700 mr-2"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteStudent('${student.id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        async function handleStudentFormSubmit(e) {
+            e.preventDefault();
+            const studentId = document.getElementById('student-id').value;
+            const studentData = {
+                name: document.getElementById('student-name').value,
+                rollNumber: document.getElementById('student-roll').value,
+                notes: document.getElementById('student-notes').value,
+            };
+            
+            try {
+                const collectionRef = collection(db, `artifacts/${appId}/public/data/students`);
+                if (studentId) { // Editing existing student
+                    await setDoc(doc(collectionRef, studentId), studentData);
+                    showMessage("Student updated successfully!");
+                } else { // Adding new student
+                    await addDoc(collectionRef, studentData);
+                    showMessage("Student added successfully!");
+                }
+                closeStudentModal();
+            } catch (error) {
+                console.error("Error saving student:", error);
+                showMessage("Failed to save student. Please try again.");
+            }
+        }
+
+        window.deleteStudent = async (id) => {
+            if (confirm("Are you sure you want to delete this student? This action cannot be undone.")) {
+                 try {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/students`, id));
+                    showMessage("Student deleted.");
+                 } catch (error) {
+                    console.error("Error deleting student:", error);
+                    showMessage("Failed to delete student.");
+                 }
+            }
+        };
+
+        // --- ATTENDANCE ---
+        async function loadAttendanceForDate(dateStr) {
+            if (!dateStr) return;
+            const attendanceSheet = document.getElementById('attendance-sheet');
+            if (students.length === 0) {
+                attendanceSheet.innerHTML = `<p class="text-center text-gray-500 py-4">Add students in the 'Manage Students' tab first.</p>`;
+                return;
+            }
+
+            try {
+                const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, dateStr);
+                const attendanceDoc = await getDoc(attendanceDocRef);
+                const records = attendanceDoc.exists() ? attendanceDoc.data().records : {};
+
+                let html = `<table class="min-w-full bg-white"><thead class="bg-gray-200"><tr>
+                    <th class="py-3 px-4 text-left">Name</th>
+                    <th class="py-3 px-4 text-left">Status</th>
+                    <th class="py-3 px-4 text-left">Note</th>
+                </tr></thead><tbody>`;
+
+                students.forEach(student => {
+                    const record = records[student.id] || { status: 'Present', note: '' };
+                    html += `
+                        <tr class="border-b" data-student-id="${student.id}">
+                            <td class="py-3 px-4">${student.name} (${student.rollNumber})</td>
+                            <td class="py-3 px-4">
+                                <select class="attendance-status p-2 border rounded-md w-full">
+                                    <option value="Present" ${record.status === 'Present' ? 'selected' : ''}>Present</option>
+                                    <option value="Absent" ${record.status === 'Absent' ? 'selected' : ''}>Absent</option>
+                                    <option value="Late" ${record.status === 'Late' ? 'selected' : ''}>Late</option>
+                                    <option value="Excused" ${record.status === 'Excused' ? 'selected' : ''}>Excused</option>
+                                </select>
+                            </td>
+                            <td class="py-3 px-4">
+                                <input type="text" class="attendance-note p-2 border rounded-md w-full" value="${record.note || ''}" placeholder="Optional note...">
+                            </td>
+                        </tr>
+                    `;
+                });
+                html += `</tbody></table>`;
+                attendanceSheet.innerHTML = html;
+            } catch (error) {
+                console.error("Error loading attendance data:", error);
+                showMessage("Could not load attendance data for the selected date.");
+            }
+        }
+
+        window.saveAttendance = async () => {
+            const dateStr = document.getElementById('attendance-date-picker').value;
+            if (!dateStr) {
+                showMessage("Please select a date first.");
+                return;
+            }
+            const attendanceRows = document.querySelectorAll('#attendance-sheet tr[data-student-id]');
+            const records = {};
+            attendanceRows.forEach(row => {
+                const studentId = row.dataset.studentId;
+                const status = row.querySelector('.attendance-status').value;
+                const note = row.querySelector('.attendance-note').value;
+                records[studentId] = { status, note };
+            });
+
+            try {
+                const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, dateStr);
+                await setDoc(attendanceDocRef, { records });
+                showMessage("Attendance saved successfully!");
+                updateDashboardStats();
+            } catch (error) {
+                console.error("Error saving attendance:", error);
+                showMessage("Failed to save attendance. Please try again.");
+            }
+        };
+
+        // --- REPORTS & STATS ---
+        async function updateDashboardStats() {
+            document.getElementById('total-students-stat').textContent = students.length;
+            const todayStr = new Date().toISOString().split('T')[0];
+            try {
+                const attendanceDocRef = doc(db, `artifacts/${appId}/public/data/attendance`, todayStr);
+                const attendanceDoc = await getDoc(attendanceDocRef);
+                if (attendanceDoc.exists()) {
+                    const records = Object.values(attendanceDoc.data().records);
+                    const presentCount = records.filter(r => r.status === 'Present' || r.status === 'Late').length;
+                    const absentCount = records.filter(r => r.status === 'Absent').length;
+                    document.getElementById('present-stat').textContent = presentCount;
+                    document.getElementById('absent-stat').textContent = absentCount;
+                } else {
+                    document.getElementById('present-stat').textContent = '0';
+                    document.getElementById('absent-stat').textContent = '0';
+                }
+            } catch (error) {
+                console.error("Error updating dashboard stats:", error);
+            }
+        }
+        
+        function renderReportStudentSelect() {
+            const select = document.getElementById('report-student-select');
+            select.innerHTML = '<option value="all">All Students</option>';
+            students.forEach(student => {
+                select.innerHTML += `<option value="${student.id}">${student.name}</option>`;
+            });
+        }
+
+        window.generateReport = async () => {
+            const startDate = document.getElementById('report-start-date').value;
+            const endDate = document.getElementById('report-end-date').value;
+            const selectedStudentId = document.getElementById('report-student-select').value;
+            const reportOutput = document.getElementById('report-output');
+
+            if (!startDate || !endDate) {
+                showMessage("Please select both a start and end date.");
+                return;
+            }
+
+            reportOutput.innerHTML = `<p class="text-center py-4">Generating report...</p>`;
+
+            try {
+                const attendanceCollectionRef = collection(db, `artifacts/${appId}/public/data/attendance`);
+                const q = query(attendanceCollectionRef, where('__name__', '>=', startDate), where('__name__', '<=', endDate));
+                const querySnapshot = await getDocs(q);
+                
+                let reportData = [];
+                querySnapshot.forEach(doc => {
+                    reportData.push({ date: doc.id, ...doc.data() });
+                });
+                
+                // Sort data by date
+                reportData.sort((a, b) => a.date.localeCompare(b.date));
+
+                if (reportData.length === 0) {
+                    reportOutput.innerHTML = `<p class="text-center py-4 text-gray-500">No attendance records found for the selected period.</p>`;
+                    return;
+                }
+                
+                let html = `<table class="min-w-full bg-white mt-4"><thead class="bg-gray-200"><tr>
+                    <th class="py-3 px-4 text-left">Date</th>
+                    <th class="py-3 px-4 text-left">Student</th>
+                    <th class="py-3 px-4 text-left">Status</th>
+                    <th class="py-3 px-4 text-left">Note</th>
+                </tr></thead><tbody>`;
+
+                reportData.forEach(day => {
+                    Object.entries(day.records).forEach(([studentId, record]) => {
+                        if (selectedStudentId === 'all' || selectedStudentId === studentId) {
+                            const student = students.find(s => s.id === studentId);
+                            if (student) {
+                                html += `
+                                    <tr class="border-b">
+                                        <td class="py-3 px-4">${day.date}</td>
+                                        <td class="py-3 px-4">${student.name}</td>
+                                        <td class="py-3 px-4">${record.status}</td>
+                                        <td class="py-3 px-4">${record.note || ''}</td>
+                                    </tr>
+                                `;
+                            }
+                        }
+                    });
+                });
+
+                html += `</tbody></table>`;
+                reportOutput.innerHTML = html;
+
+            } catch (error) {
+                console.error("Error generating report:", error);
+                reportOutput.innerHTML = `<p class="text-center py-4 text-red-500">An error occurred while generating the report.</p>`;
+            }
+        };
+
+        // --- MODAL & MESSAGE HANDLING ---
+        window.openAddStudentModal = () => {
+            document.getElementById('student-form').reset();
+            document.getElementById('student-id').value = '';
+            document.getElementById('student-modal-title').textContent = 'Add New Student';
+            document.getElementById('student-modal-backdrop').classList.add('active');
+        };
+
+        window.openEditStudentModal = (id) => {
+            const student = students.find(s => s.id === id);
+            if (student) {
+                document.getElementById('student-id').value = student.id;
+                document.getElementById('student-name').value = student.name;
+                document.getElementById('student-roll').value = student.rollNumber;
+                document.getElementById('student-notes').value = student.notes || '';
+                document.getElementById('student-modal-title').textContent = 'Edit Student';
+                document.getElementById('student-modal-backdrop').classList.add('active');
+            }
+        };
+
+        window.closeStudentModal = () => {
+            document.getElementById('student-modal-backdrop').classList.remove('active');
+        };
+
+        function showMessage(text) {
+            document.getElementById('message-text').textContent = text;
+            document.getElementById('message-modal-backdrop').classList.add('active');
+        }
+        
+        window.closeMessageModal = () => {
+            document.getElementById('message-modal-backdrop').classList.remove('active');
+        }
+        
+        // Make functions globally accessible
+        window.loadAttendanceForDate = loadAttendanceForDate;
+        window.handleStudentFormSubmit = handleStudentFormSubmit;
+
+    </script>
+</body>
+</html>
